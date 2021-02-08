@@ -30,7 +30,7 @@ class LoopThread(Thread):
         ProgramRunning=True
         CurrentProgramName=self.program['name']
 
-        #Loop over all steps
+        #Loop over all steps of the program that was POST-ed in json:
         for settemp, percent, steptime in zip(self.program['temperature'],self.program['percentage'],self.program['time']):
             CurrentStep+=1
             if self.stop_event.is_set():
@@ -38,7 +38,7 @@ class LoopThread(Thread):
             oncycles=round(steptime*percent/100*2) #total amount of 30s cycles to keep the oven on (where self.program['time'] contains the time for each step in minutes)
             offcycles=round(steptime*(1-percent/100)*2)
 
-            #this piece of code distributes the on and off cycles in equal parts, it's not pretty but it works (technically except for when there is 1 on cycle or 1 off cycle)
+            #this piece of code distributes the on and off cycles in equal parts, it's not pretty but it works (technically except for when there is 1 oncycle or 1 offcycle)
             hysteresistemp=settemp
             if oncycles>offcycles & offcycles>0:
                 quotient=int(oncycles/offcycles)
@@ -64,7 +64,7 @@ class LoopThread(Thread):
                     hysteresistemp=self.ovencycle(settemp,hysteresistemp,1,True)
                     if self.stop_event.is_set():
                         break
-            time.sleep(2)
+            time.sleep(6) #TODO: remove me befor production
             print('end of program step')
         ProgramRunning=False
         CurrentStep=0
@@ -77,7 +77,6 @@ class LoopThread(Thread):
         for _ in range(int(cycles*30)): #loop over 30s * cycles, while checking each second if we should turn off
             if self.stop_event.is_set():
                 break
-            #TODO: read current temperature here and put it in curtemp
             curtemp=sensor.temperature
             hightemp = curtemp > hysteresistemp
             if ovenon & hightemp:
@@ -136,7 +135,6 @@ def stop():
 
 @app.route("/start", methods=["POST"])
 def start():
-    
     errors = ""
     if STOP_EVENT.is_set:
         try:
@@ -166,9 +164,16 @@ def home():
     programselect=''
     for program in programs:
         programselect+="<option value='"+json.dumps(programs[program])+"'>"+programs[program]['name']+"</option>\n"
+    
     curtemp=sensor.temperature
-
-    return render_template('home.html',programlist=programselect,temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep)
+    if STOP_EVENT.is_set():
+        ovenisstopping='The program is currently stopping'
+    else:
+        ovenisstopping=''
+    if ProgramRunning:
+        return render_template('Program_running.html',temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep,ovenisstopping=ovenisstopping)
+    else:
+        return render_template('No_program_running.html',programlist=programselect,temperature=curtemp)
 
 @app.route("/shutdown")
 def shutdown():
