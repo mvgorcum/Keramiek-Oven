@@ -35,8 +35,8 @@ class LoopThread(Thread):
             CurrentStep+=1
             if self.stop_event.is_set():
                 break
-            oncycles=round(steptime*percent/100*2) #total amount of 30s cycles to keep the oven on (where self.program['time'] contains the time for each step in minutes)
-            offcycles=round(steptime*(1-percent/100)*2)
+            oncycles=round(steptime*percent/100*(60/MinimumSecondsPerStep)) #total amount of 30s cycles to keep the oven on (where self.program['time'] contains the time for each step in minutes)
+            offcycles=round(steptime*(1-percent/100)*(60/MinimumSecondsPerStep))
 
             #this piece of code distributes the on and off cycles in equal parts, it's not pretty but it works (technically except for when there is 1 oncycle or 1 offcycle)
             hysteresistemp=settemp
@@ -64,7 +64,7 @@ class LoopThread(Thread):
                     hysteresistemp=self.ovencycle(settemp,hysteresistemp,1,True)
                     if self.stop_event.is_set():
                         break
-            time.sleep(6) #TODO: remove me befor production
+            time.sleep(2) #TODO: remove me before production
             print('end of program step')
         ProgramRunning=False
         CurrentStep=0
@@ -74,7 +74,7 @@ class LoopThread(Thread):
             
     def ovencycle(self,settemp,hysteresistemp,cycles,ovenon):
         sleeptime=0
-        for _ in range(int(cycles*30)): #loop over 30s * cycles, while checking each second if we should turn off
+        for _ in range(int(cycles*MinimumSecondsPerStep)): #loop over 30s * cycles, while checking each second if we should turn off
             if self.stop_event.is_set():
                 break
             curtemp=sensor.temperature
@@ -90,13 +90,16 @@ class LoopThread(Thread):
                 if hysteresistemp<settemp:
                     hysteresistemp=settemp+1
                     print('set hysteresis temp to: '+ str(hysteresistemp))
+            else:
+                #GPIO.output(18, GPIO.LOW) #set control pin to high, note that currently it is hardcoded to pin 18 **TODO**
+                unused=1
 
             #time.sleep(1) TODO: turn on for production, remove sleeptime variable?
             sleeptime+=1
         
         #Added time for cycle total requiring a step less than 1 second 
-        #time.sleep((cycles*30-int(cycles*30))) TODO: turn on for production, remove sleeptime variable?
-        sleeptime+=(cycles*30-int(cycles*30))
+        #time.sleep((cycles*MinimumSecondsPerStep-int(cycles*MinimumSecondsPerStep))) TODO: turn on for production, remove sleeptime variable?
+        sleeptime+=(cycles*MinimumSecondsPerStep-int(cycles*MinimumSecondsPerStep))
         #GPIO.output(18, GPIO.LOW) #set control pin to low, note that currently it is hardcoded to pin 18 **TODO**
         if ovenon:
             print('oven on for for '+str(sleeptime)+' seconds')
@@ -125,8 +128,9 @@ ProgramRunning=False
 CurrentProgramName=''
 CurrentStep=0
 
-app = Flask(__name__)
+MinimumSecondsPerStep=int(2) #needs to be an int bigger 1
 
+app = Flask(__name__)
 
 @app.route("/stop",methods=["POST"])
 def stop():
