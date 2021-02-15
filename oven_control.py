@@ -35,7 +35,7 @@ class LoopThread(Thread):
             CurrentStep+=1
             if self.stop_event.is_set():
                 break
-            oncycles=round(steptime*percent/100*(60/MinimumSecondsPerStep)) #total amount of 30s cycles to keep the oven on (where self.program['time'] contains the time for each step in minutes)
+            oncycles=round(steptime*percent/100*(60/MinimumSecondsPerStep)) #total amount of X second cycles to keep the oven on (where self.program['time'] contains the time for each step in minutes)
             offcycles=round(steptime*(1-percent/100)*(60/MinimumSecondsPerStep))
 
             #this piece of code distributes the on and off cycles in equal parts, it's not pretty but it works (technically except for when there is 1 oncycle or 1 offcycle)
@@ -185,6 +185,13 @@ def shutdown():
     thread.join()
     return "OK", 200
 
+@app.route("/createprogram", methods=["POST", "GET"])
+def createprogram():
+    if request.method == 'POST':
+        print(request.data)
+        return "OK", 200
+    elif request.method == 'GET':
+        return render_template('createProgram.html')
 
 if __name__ == '__main__':
     app.run()

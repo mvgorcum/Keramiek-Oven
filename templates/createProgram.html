@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+   <head>
+      <script>
+         var counter=2;
+         function rowFunction(x) {
+            var a = document.getElementById(x).insertRow(counter+1);
+            var stepnr = a.insertCell(0);
+            var perc = a.insertCell(1);
+            var temp  = a.insertCell(2);
+            var tim  = a.insertCell(3);
+            counter++;
+            stepnr.innerHTML = "Stap "+(counter+1)
+            perc.innerHTML = "<input type='number' name='percentage["+counter+"]' id='percentage["+counter+"]'>";
+            temp.innerHTML = "<input type='number' name='temperature["+counter+"]' id='temperature["+counter+"]'>";
+            tim.innerHTML = "<input type='number' name='time["+counter+"]' id='time["+counter+"]'>";
+         }
+         function SubmitForm() {
+         var percentages=[]
+         var temperatures=[]
+         var times=[]
+         for (var i = 1; i < counter+1; i++) { 
+            percentages.push(document.getElementById("percentage["+i+"]").value);
+            temperatures.push(document.getElementById("temperature["+i+"]").value);
+            times.push(document.getElementById("time["+i+"]").value);
+         }
+         var submitobj = {"name":document.getElementById("progname").value,"steps":counter, "percentage":percentages,"temperature":temperatures,"time":times};
+         let response = fetch('createprogram', {
+            method: 'POST',
+            body: JSON.stringify(submitobj)
+            });
+        response.then(res => 
+        {if (res.ok){ alert('Program Created')}
+        else {alert('Error Creating Program')}});
+        }
+      </script>
+   </head>
+   <body>
+    <form method="POST" ACTION="createprogram">
+    <b>Program name:</b><input type="text" name="progname" id="progname">
+      <table style="border:2px solid black" id="newtable">
+        <tr>
+        <th>Step number</th>
+        <th>Percentage</th>
+        <th>Temperature</th>
+        <th>Time</th>
+        </tr>
+        <tr><td>Stap 1</td><td><input type="number" name="percentage[1]" id="percentage[1]" Value="100"></td><td><input type="number" name="temperature[1]" id="temperature[1]" Value="100"></td><td><input type="number" name="time[1]" id="time[1]"  Value="100"></td></tr>
+        <tr><td>Stap 2</td><td><input type="number" name="percentage[2]" id="percentage[2]" Value="100"></td><td><input type="number" name="temperature[2]" id="temperature[2]" Value="100"></td><td><input type="number" name="time[2]" id="time[2]" Value="100"></td></tr>
+      </table>
+         <input type="button" onclick="rowFunction('newtable')" value="Add a row">
+         <input type="button" onclick="return SubmitForm(this.form)" value="Create Program">
+    </form>
+   </body>
+</html>
