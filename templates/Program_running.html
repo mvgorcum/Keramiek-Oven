@@ -1,28 +1,23 @@
-<style type="text/css">
-body{
-margin:40px
-auto;max-width:650px;
-line-height:1.6;
-font-size:18px;
-color:#444;
-padding:0 10px;
-background: #EEEEEE
-}
-h1,h2,h3{line-height:1.2}
-</style>
-<meta http-equiv="refresh" content="5" >
+<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/style.css') }}">
+<meta http-equiv="refresh" content="2" >
 <HTML>
     <BODY>
         <h3>The oven is currently running:</h3>
         {{ runningprogramname }}
-        <P>Current (fake) temperature:</P>
+        <P>Current temperature:</P>
         {{ temperature }}°C
         <P>Current step:</P>
-        {{ stepnumber }}
+        {{ stepnumber }} / {{ totalsteps }}
         <P>Click stop to stop the oven program:</P>
         <FORM METHOD="POST" ACTION="stop">
             <P><INPUT TYPE="SUBMIT" VALUE="Stop" /></P>
         </FORM>
         {{ ovenisstopping }}
+        <form action="/createprogram">
+            <input type="submit" value="Create a new program" />
+        </form>
+        <form action="/editprogram">
+            <input type="submit" value="Edit a program" />
+        </form>
     </BODY>
 </HTML>

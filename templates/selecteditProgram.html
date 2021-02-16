@@ -2,20 +2,12 @@
 <HTML>
     <BODY>
         <h3>Select program to start:</h3>
-        <FORM METHOD="POST" ACTION="start">
+        <FORM METHOD="POST" ACTION="editprogram">
             <select name="programnumber" id="programnumber">
             <option value="" disabled="disabled" selected="selected">Please select a name</option>
             {{ programlist | safe }}
             </select>
-            <P><INPUT TYPE="SUBMIT" VALUE="Start" /></P>
-            <P>The current temperature is:</P>
-            {{ temperature }}°C
+            <P><INPUT TYPE="SUBMIT" VALUE="Edit" /></P>
         </FORM>
-    <form action="/createprogram">
-        <input type="submit" value="Create a new program" />
-    </form>
-    <form action="/editprogram">
-        <input type="submit" value="Edit a program" />
-    </form>
     </BODY>
 </HTML>

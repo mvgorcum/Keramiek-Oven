@@ -27,9 +27,11 @@ class LoopThread(Thread):
         global ProgramRunning
         global CurrentProgramName
         global CurrentStep
+        global TotalSteps
+
         ProgramRunning=True
         CurrentProgramName=self.program['name']
-
+        TotalSteps=self.program['steps']
         #Loop over all steps of the program that was POST-ed in json:
         for settemp, percent, steptime in zip(self.program['temperature'],self.program['percentage'],self.program['time']):
             CurrentStep+=1
@@ -59,7 +61,7 @@ class LoopThread(Thread):
             else:
                 quotient=int(offcycles/oncycles)
                 mod=offcycles%oncycles
-                for i in range(oncycles):
+                for _ in range(oncycles):
                     hysteresistemp=self.ovencycle(settemp,hysteresistemp,(quotient+mod/oncycles),False)
                     hysteresistemp=self.ovencycle(settemp,hysteresistemp,1,True)
                     if self.stop_event.is_set():
@@ -74,7 +76,7 @@ class LoopThread(Thread):
             
     def ovencycle(self,settemp,hysteresistemp,cycles,ovenon):
         sleeptime=0
-        for _ in range(int(cycles*MinimumSecondsPerStep)): #loop over 30s * cycles, while checking each second if we should turn off
+        for _ in range(int(cycles*MinimumSecondsPerStep)): #loop over 2s * cycles, while checking each second if we should turn off
             if self.stop_event.is_set():
                 break
             curtemp=sensor.temperature
@@ -128,9 +130,31 @@ ProgramRunning=False
 CurrentProgramName=''
 CurrentStep=0
 
-MinimumSecondsPerStep=int(2) #needs to be an int bigger 1
+MinimumSecondsPerStep=int(2) #needs to be an int >= 1
 
 app = Flask(__name__)
+
+@app.route("/")
+def home():
+    global ProgramRunning
+    global CurrentProgramName
+    global CurrentStep
+    global TotalSteps
+    with open('programs.json') as f:
+        programs = json.load(f)
+    programselect=''
+    for program in programs:
+        programselect+="<option value='"+json.dumps(programs[program])+"'>"+programs[program]['name']+"</option>\n"
+    
+    curtemp=sensor.temperature
+    if STOP_EVENT.is_set():
+        ovenisstopping='The program is currently stopping'
+    else:
+        ovenisstopping=''
+    if ProgramRunning:
+        return render_template('Program_running.html',temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep,totalsteps=TotalSteps,ovenisstopping=ovenisstopping)
+    else:
+        return render_template('No_program_running.html',programlist=programselect,temperature=curtemp)
 
 @app.route("/stop",methods=["POST"])
 def stop():
@@ -148,50 +172,107 @@ def start():
             errors += "<p>{!r} is not valid json.</p>\n".format(request.form["programjson"])
         if not (len(program['percentage'])==program['steps'] & len(program['temperature'])==program['steps'] & len(program['time'])==program['steps']):
             errors +='<p>Invalid program sent, the amount of steps in inconsistent</p>'
-        
+        if (max(program['percentage'])>100):
+            errors +='<p>Invalid program sent, Percentage higher than 100</p>'
         if not errors=='':
             return errors
         STOP_EVENT.clear()
         thread = LoopThread(STOP_EVENT, program, sensor)
         thread.start()
-    
     return redirect('/',code=302)
-
-
-@app.route("/")
-def home():
-    global ProgramRunning
-    global CurrentProgramName
-    global CurrentStep
-    with open('programs.json') as f:
-        programs = json.load(f)
-    programselect=''
-    for program in programs:
-        programselect+="<option value='"+json.dumps(programs[program])+"'>"+programs[program]['name']+"</option>\n"
-    
-    curtemp=sensor.temperature
-    if STOP_EVENT.is_set():
-        ovenisstopping='The program is currently stopping'
-    else:
-        ovenisstopping=''
-    if ProgramRunning:
-        return render_template('Program_running.html',temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep,ovenisstopping=ovenisstopping)
-    else:
-        return render_template('No_program_running.html',programlist=programselect,temperature=curtemp)
-
-@app.route("/shutdown")
-def shutdown():
-    STOP_EVENT.set()
-    thread.join()
-    return "OK", 200
 
 @app.route("/createprogram", methods=["POST", "GET"])
 def createprogram():
     if request.method == 'POST':
         print(request.data)
+        newprogram=json.loads(request.data)
+        with open('programs.json') as f:
+            programs = json.load(f)
+        #this is not very pretty, but we read the keys in as int to add the new program as the highest number
+        programs.update({str(max([int(x) for x in [*programs.keys()]])+1):newprogram})
+        if not (len(newprogram['percentage'])==newprogram['steps'] & len(newprogram['temperature'])==newprogram['steps'] & len(newprogram['time'])==newprogram['steps']):
+            return "Inconsistent program", 400
+        f=open('programs.json','w')
+        f.write(json.dumps(programs))
         return "OK", 200
+
     elif request.method == 'GET':
         return render_template('createProgram.html')
+
+@app.route("/editprogram", methods=["GET","POST"])
+def editprogram():
+    if request.method == 'POST':
+        print(request.form["programnumber"])
+        programwithkey=json.loads(request.form["programnumber"])
+        editkey=[*programwithkey.keys()][0]
+        program=programwithkey[editkey]
+        steps=program['steps']
+        programname=program['name']
+        stepform=''
+        for i in range(1,steps+1):
+            stepform += '<tr><td>Stap '+str(i)+'</td><td><input type="number" name="percentage['+str(i)+']" id="percentage['+str(i)+']" Value="'+str(program['percentage'][i-1])+'"></td><td><input type="number" name="temperature['+str(i)+']" id="temperature['+str(i)+']" Value="'+str(program['temperature'][i-1])+'"></td><td><input type="number" name="time['+str(i)+']" id="time['+str(i)+']"  Value="'+str(program['time'][i-1])+'"></td></tr>'
+        return render_template('editProgram.html', steps=steps, programname=programname, StepForm=stepform, programid=editkey)
+    if request.method == 'GET':
+        with open('programs.json') as f:
+            programs = json.load(f)
+        programselect=''
+        for program in programs:
+            programselect+="<option value='"+json.dumps({program:programs[program]})+"'>"+programs[program]['name']+"</option>\n"
+        return render_template('selecteditProgram.html', programlist=programselect)
+
+@app.route("/updateprogram", methods=["POST"])
+def updateprogram():
+    toupdateprogram=json.loads(request.data)
+    with open('programs.json') as f:
+        programs = json.load(f)
+    programs.update(toupdateprogram)
+    toupdateprogramcontent=toupdateprogram[[*toupdateprogram.keys()][0]]
+    if not (len(toupdateprogramcontent['percentage'])==toupdateprogramcontent['steps'] & len(toupdateprogramcontent['temperature'])==toupdateprogramcontent['steps'] & len(toupdateprogramcontent['time'])==toupdateprogramcontent['steps']):
+        return "Inconsistent program", 400
+    if (max(toupdateprogramcontent['percentage'])>100):
+        return "Inconsistent program", 400
+    f=open('programs.json','w')
+    f.write(json.dumps(programs))
+    return "OK", 200
+
+@app.route("/deleteprogram", methods=["POST","GET"])
+def deleteprogram():
+    if request.method == 'GET':
+        with open('programs.json') as f:
+            programs = json.load(f)
+        programselect=''
+        for program in programs:
+            programselect+="<option value='"+json.dumps({program})+"'>"+programs[program]['name']+"</option>\n"
+        return render_template('selecteditProgram.html', programlist=programselect)
+    if request.method == 'POST':
+        programkey=json.loads(request.form["programnumber"])
+        with open('programs.json') as f:
+            programs = json.load(f)
+        #delete key now, and write, but I haven't yet TODO
+        
+    
+
+@app.route("/status")
+def status():
+    global ProgramRunning
+    global CurrentProgramName
+    global CurrentStep
+    global TotalSteps
+    curtemp=sensor.temperature
+    statusobject={"temperature":curtemp}
+    if ProgramRunning:
+        statusobject.update({"isrunning":True,"currentprogram":CurrentProgramName,"currentstep":CurrentStep,"totalsteps":TotalSteps})
+        if STOP_EVENT.is_set():
+            statusobject.update({"stopping":True})
+    else:
+        statusobject.update({"isrunning":False})
+    return json.dumps(statusobject)
+
+@app.route("/programs")
+def programs():
+    with open('programs.json') as f:
+        programs = json.load(f)
+    return json.dumps(programs)
 
 if __name__ == '__main__':
     app.run()

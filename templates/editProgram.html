@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/style.css') }}">
+   <head>
+      <script>
+         var counter={{steps}};
+         function addRow(x) {
+            var a = document.getElementById(x).insertRow(counter+1);
+            var stepnr = a.insertCell(0);
+            var perc = a.insertCell(1);
+            var temp  = a.insertCell(2);
+            var tim  = a.insertCell(3);
+            counter++;
+            stepnr.innerHTML = "Stap "+(counter)
+            perc.innerHTML = "<input type='number' name='percentage["+counter+"]' id='percentage["+counter+"]'>";
+            temp.innerHTML = "<input type='number' name='temperature["+counter+"]' id='temperature["+counter+"]'>";
+            tim.innerHTML = "<input type='number' name='time["+counter+"]' id='time["+counter+"]'>";
+         }
+        function removeRow(x) {
+            var table = document.getElementById(x)
+            var row = table.rows[counter];
+            row.parentNode.removeChild(row);
+            counter--;
+         }
+         function SubmitForm() {
+         var percentages=[]
+         var temperatures=[]
+         var times=[]
+         for (var i = 1; i < counter+1; i++) { 
+            percentages.push(document.getElementById("percentage["+i+"]").value);
+            temperatures.push(document.getElementById("temperature["+i+"]").value);
+            times.push(document.getElementById("time["+i+"]").value);
+         }
+         var submitobj = {"{{ programid }}":{"name":document.getElementById("progname").value,"steps":counter, "percentage":percentages,"temperature":temperatures,"time":times}};
+         let response = fetch('updateprogram', {
+            method: 'POST',
+            body: JSON.stringify(submitobj)
+            });
+        response.then(res => 
+        {if (res.ok){ 
+        alert('Program Created');
+        window.location.href = '/';
+        }
+        else {alert('Error Creating Program')}});
+        }
+      </script>
+   </head>
+   <body>
+    <form method="POST" ACTION="createprogram">
+    <b>Program name:</b><input type="text" name="progname" id="progname" value="{{ programname }}">
+      <table style="border:2px solid black" id="newtable">
+        <tr>
+        <th>Step number</th>
+        <th>Percentage</th>
+        <th>Temperature</th>
+        <th>Time</th>
+        </tr>
+        {{ StepForm | safe }}
+      </table>
+         <input type="button" onclick="addRow('newtable')" value="Add a row">
+         <input type="button" onclick="removeRow('newtable')" value="Remove last row">
+         <input type="button" onclick="return SubmitForm(this.form)" value="Edit Program">
+    </form>
+   </body>
+</html>
