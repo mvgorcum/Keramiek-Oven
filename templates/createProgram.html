@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/style.css') }}">
+<!DOCTYPE html>
 <html>
+<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/style.css') }}">
    <head>
       <script>
          var stepcounter=1;
@@ -18,9 +20,9 @@
          }
         function removeRow(x) {
             var table = document.getElementById(x)
-            var row = table.rows[counter];
+            var row = table.rows[stepcounter];
             row.parentNode.removeChild(row);
-            counter--;
+            stepcounter--;
          }
          funct
          function SubmitForm() {
@@ -59,5 +61,6 @@
          <input type="button" onclick="removeRow('newtable')" value="Remove last step">
          <input type="button" onclick="return SubmitForm(this.form)" value="Create program">
     </form>
+         <form action="/home"><input type="submit" value="Back home"></form>
    </body>
 </html>

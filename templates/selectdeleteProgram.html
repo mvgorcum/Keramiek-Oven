@@ -1,13 +1,13 @@
 <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/style.css') }}">
 <HTML>
     <BODY>
-        <h3>Select program to edit:</h3>
-        <FORM METHOD="POST" ACTION="editprogram">
+        <h3>Select program to delete:</h3>
+        <FORM METHOD="POST" ACTION="deleteprogram">
             <select name="programnumber" id="programnumber">
             <option value="" disabled="disabled" selected="selected">Please select a name</option>
             {{ programlist | safe }}
             </select>
-            <P><INPUT TYPE="SUBMIT" VALUE="Edit"></FORM><form action="/home"><input type="submit" value="Back home"></form></P>
+            <P><INPUT TYPE="SUBMIT" VALUE="Delete"></FORM><form action="/home"><input type="submit" value="Back home"></form></P>
 
     </BODY>
 </HTML>

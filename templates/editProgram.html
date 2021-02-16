@@ -3,35 +3,35 @@
 <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/style.css') }}">
    <head>
       <script>
-         var counter={{steps}};
+         var stepcounter={{steps}};
          function addRow(x) {
-            var a = document.getElementById(x).insertRow(counter+1);
+            var a = document.getElementById(x).insertRow(stepcounter+1);
             var stepnr = a.insertCell(0);
             var perc = a.insertCell(1);
             var temp  = a.insertCell(2);
             var tim  = a.insertCell(3);
-            counter++;
-            stepnr.innerHTML = "Stap "+(counter)
-            perc.innerHTML = "<input type='number' name='percentage["+counter+"]' id='percentage["+counter+"]'>";
-            temp.innerHTML = "<input type='number' name='temperature["+counter+"]' id='temperature["+counter+"]'>";
-            tim.innerHTML = "<input type='number' name='time["+counter+"]' id='time["+counter+"]'>";
+            stepcounter++;
+            stepnr.innerHTML = "Stap "+(stepcounter)
+            perc.innerHTML = "<input type='number' name='percentage["+stepcounter+"]' id='percentage["+stepcounter+"]'>";
+            temp.innerHTML = "<input type='number' name='temperature["+stepcounter+"]' id='temperature["+stepcounter+"]'>";
+            tim.innerHTML = "<input type='number' name='time["+stepcounter+"]' id='time["+stepcounter+"]'>";
          }
         function removeRow(x) {
             var table = document.getElementById(x)
-            var row = table.rows[counter];
+            var row = table.rows[stepcounter];
             row.parentNode.removeChild(row);
-            counter--;
+            stepcounter--;
          }
          function SubmitForm() {
          var percentages=[]
          var temperatures=[]
          var times=[]
-         for (var i = 1; i < counter+1; i++) { 
+         for (var i = 1; i < stepcounter+1; i++) { 
             percentages.push(document.getElementById("percentage["+i+"]").value);
             temperatures.push(document.getElementById("temperature["+i+"]").value);
             times.push(document.getElementById("time["+i+"]").value);
          }
-         var submitobj = {"{{ programid }}":{"name":document.getElementById("progname").value,"steps":counter, "percentage":percentages,"temperature":temperatures,"time":times}};
+         var submitobj = {"{{ programid }}":{"name":document.getElementById("progname").value, "steps":stepcounter, "percentage":percentages,"temperature":temperatures,"time":times}};
          let response = fetch('updateprogram', {
             method: 'POST',
             body: JSON.stringify(submitobj)
@@ -59,7 +59,8 @@
       </table>
          <input type="button" onclick="addRow('newtable')" value="Add a row">
          <input type="button" onclick="removeRow('newtable')" value="Remove last row">
-         <input type="button" onclick="return SubmitForm(this.form)" value="Edit Program">
-    </form>
+         <input type="button" onclick="return SubmitForm(this.form)" value="Edit Program"></br>
+         </form>
+         <form action="/home"><input type="submit" value="Back home"></form>
    </body>
 </html>

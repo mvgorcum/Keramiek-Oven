@@ -66,7 +66,7 @@ class LoopThread(Thread):
                     hysteresistemp=self.ovencycle(settemp,hysteresistemp,1,True)
                     if self.stop_event.is_set():
                         break
-            time.sleep(2) #TODO: remove me before production
+            #time.sleep(2) #TODO: remove me before production
             print('end of program step')
         ProgramRunning=False
         CurrentStep=0
@@ -96,11 +96,11 @@ class LoopThread(Thread):
                 #GPIO.output(18, GPIO.LOW) #set control pin to high, note that currently it is hardcoded to pin 18 **TODO**
                 unused=1
 
-            #time.sleep(1) TODO: turn on for production, remove sleeptime variable?
+            #time.sleep(0.05) #TODO: turn on for production, remove sleeptime variable?
             sleeptime+=1
         
         #Added time for cycle total requiring a step less than 1 second 
-        #time.sleep((cycles*MinimumSecondsPerStep-int(cycles*MinimumSecondsPerStep))) TODO: turn on for production, remove sleeptime variable?
+        #time.sleep((cycles*MinimumSecondsPerStep-int(cycles*MinimumSecondsPerStep))) #TODO: turn on for production, remove sleeptime variable?
         sleeptime+=(cycles*MinimumSecondsPerStep-int(cycles*MinimumSecondsPerStep))
         #GPIO.output(18, GPIO.LOW) #set control pin to low, note that currently it is hardcoded to pin 18 **TODO**
         if ovenon:
@@ -133,6 +133,10 @@ CurrentStep=0
 MinimumSecondsPerStep=int(2) #needs to be an int >= 1
 
 app = Flask(__name__)
+
+@app.route("/home")
+def gohome():
+    return redirect('/', code=302)
 
 @app.route("/")
 def home():
@@ -172,7 +176,7 @@ def start():
             errors += "<p>{!r} is not valid json.</p>\n".format(request.form["programjson"])
         if not (len(program['percentage'])==program['steps'] & len(program['temperature'])==program['steps'] & len(program['time'])==program['steps']):
             errors +='<p>Invalid program sent, the amount of steps in inconsistent</p>'
-        if (max(program['percentage'])>100):
+        if (max(map(int, program['percentage']))>100):
             errors +='<p>Invalid program sent, Percentage higher than 100</p>'
         if not errors=='':
             return errors
@@ -184,7 +188,6 @@ def start():
 @app.route("/createprogram", methods=["POST", "GET"])
 def createprogram():
     if request.method == 'POST':
-        print(request.data)
         newprogram=json.loads(request.data)
         with open('programs.json') as f:
             programs = json.load(f)
@@ -202,7 +205,6 @@ def createprogram():
 @app.route("/editprogram", methods=["GET","POST"])
 def editprogram():
     if request.method == 'POST':
-        print(request.form["programnumber"])
         programwithkey=json.loads(request.form["programnumber"])
         editkey=[*programwithkey.keys()][0]
         program=programwithkey[editkey]
@@ -242,15 +244,16 @@ def deleteprogram():
             programs = json.load(f)
         programselect=''
         for program in programs:
-            programselect+="<option value='"+json.dumps({program})+"'>"+programs[program]['name']+"</option>\n"
-        return render_template('selecteditProgram.html', programlist=programselect)
+            programselect+="<option value='"+program+"'>"+programs[program]['name']+"</option>\n"
+        return render_template('selectdeleteProgram.html', programlist=programselect)
     if request.method == 'POST':
         programkey=json.loads(request.form["programnumber"])
         with open('programs.json') as f:
             programs = json.load(f)
-        #delete key now, and write, but I haven't yet TODO
-        
-    
+        deletedprogram=programs.pop(str(programkey), None)
+        f=open('programs.json','w')
+        f.write(json.dumps(programs))
+        return "OK", 200
 
 @app.route("/status")
 def status():
