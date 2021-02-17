@@ -40,7 +40,10 @@
             body: JSON.stringify(submitobj)
             });
         response.then(res => 
-        {if (res.ok){ alert('Program Created')}
+        {if (res.ok){ 
+        alert('Program Created');
+        window.location.href = '/';
+        }
         else {alert('Error Creating Program')}});
         }
       </script>
