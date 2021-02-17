@@ -27,9 +27,9 @@
          var temperatures=[]
          var times=[]
          for (var i = 1; i < stepcounter+1; i++) { 
-            percentages.push(document.getElementById("percentage["+i+"]").value);
-            temperatures.push(document.getElementById("temperature["+i+"]").value);
-            times.push(document.getElementById("time["+i+"]").value);
+            percentages.push(Number(document.getElementById("percentage["+i+"]").value));
+            temperatures.push(Number(document.getElementById("temperature["+i+"]").value));
+            times.push(Number(document.getElementById("time["+i+"]").value));
          }
          var submitobj = {"{{ programid }}":{"name":document.getElementById("progname").value, "steps":stepcounter, "percentage":percentages,"temperature":temperatures,"time":times}};
          let response = fetch('updateprogram', {
