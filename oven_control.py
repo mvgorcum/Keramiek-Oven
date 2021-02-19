@@ -1,5 +1,7 @@
 import time
 import RPi.GPIO as GPIO
+import signal
+import sys
 """
 #to read temperatures, we need this, according to https://github.com/adafruit/Adafruit_CircuitPython_MAX31855
 import adafruit_max31855 
@@ -77,8 +79,7 @@ class LoopThread(Thread):
         ProgramRunning=False
         CurrentStep=0
         CurrentProgramName=''
-        #if self.stop_event.is_set():
-        #    self.stop_event.clear
+        STOP_EVENT.set()
             
     def ovencycle(self,settemp,hysteresistemp,cycles,ovenon):
         sleeptime=0
@@ -168,12 +169,11 @@ def home():
     else:
         ovenisstopping=''
     if ProgramRunning:
-        if thread!=None:
-            return render_template('Program_running.html',temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep,totalsteps=TotalSteps,ovenisstopping=ovenisstopping)
-        else:
-            return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='Program seems to have ended unexpectidly')
+        if thread == None:
+            print('thread is none, but programrunning is true')
+        return render_template('Program_running.html',temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep,totalsteps=TotalSteps,ovenisstopping=ovenisstopping)
     else:
-        STOP_EVENT.stop_event.set()
+        STOP_EVENT.set()
         return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='')
 
 @app.route("/stop",methods=["POST"])
@@ -293,6 +293,11 @@ def programs():
         programs = json.load(f)
     return json.dumps(programs)
 
+def Exit_gracefully(signal, frame):
+    #turn off the oven pin upon sigint to prevent the oven from accidentally staying on
+    GPIO.output(gpioOvenPin, GPIO.LOW)
+    sys.exit(0)
 
 if __name__ == '__main__':
+    signal.signal(signal.SIGINT, Exit_gracefully)
     app.run()
