@@ -1,5 +1,5 @@
 import time
-#import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 """
 #to read temperatures, we need this, according to https://github.com/adafruit/Adafruit_CircuitPython_MAX31855
 import adafruit_max31855 
@@ -77,8 +77,8 @@ class LoopThread(Thread):
         ProgramRunning=False
         CurrentStep=0
         CurrentProgramName=''
-        if self.stop_event.is_set():
-            self.stop_event.clear
+        #if self.stop_event.is_set():
+        #    self.stop_event.clear
             
     def ovencycle(self,settemp,hysteresistemp,cycles,ovenon):
         sleeptime=0
@@ -119,9 +119,8 @@ class LoopThread(Thread):
 STOP_EVENT = Event()
 thread = None
 
-def stopbutton(): # see: https://raspberrypihq.com/use-a-push-button-with-raspberry-pi-gpio/ connect gpioButtonPin to 3.3V, preferably through a resistor
-    if GPIO.input(gpioButtonPin) == GPIO.HIGH:
-        STOP_EVENT.set()
+def stopbutton(channel): # see: https://raspberrypihq.com/use-a-push-button-with-raspberry-pi-gpio/ connect gpioButtonPin to 3.3V, preferably through a resistor
+    STOP_EVENT.set()
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(gpioOvenPin, GPIO.OUT)
@@ -152,6 +151,7 @@ def gohome():
 
 @app.route("/")
 def home():
+    global thread
     global ProgramRunning
     global CurrentProgramName
     global CurrentStep
@@ -173,6 +173,7 @@ def home():
         else:
             return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='Program seems to have ended unexpectidly')
     else:
+        STOP_EVENT.stop_event.set()
         return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='')
 
 @app.route("/stop",methods=["POST"])
@@ -183,7 +184,7 @@ def stop():
 @app.route("/start", methods=["POST"])
 def start():
     errors = ""
-    if STOP_EVENT.is_set:
+    if STOP_EVENT.is_set():
         try:
             programjson =request.form["programnumber"]
             program=json.loads(programjson)
