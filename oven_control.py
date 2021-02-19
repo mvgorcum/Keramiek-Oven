@@ -170,8 +170,9 @@ def home():
         ovenisstopping=''
     if ProgramRunning:
         if thread == None:
-            print('thread is none, but programrunning is true')
-        return render_template('Program_running.html',temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep,totalsteps=TotalSteps,ovenisstopping=ovenisstopping)
+            return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='program ended unexpectedly')
+        else:
+            return render_template('Program_running.html',temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep,totalsteps=TotalSteps,ovenisstopping=ovenisstopping)
     else:
         STOP_EVENT.set()
         return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='')
@@ -183,6 +184,7 @@ def stop():
 
 @app.route("/start", methods=["POST"])
 def start():
+    global thread
     errors = ""
     if STOP_EVENT.is_set():
         try:
