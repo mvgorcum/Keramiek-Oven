@@ -14,6 +14,12 @@ import json
 #for testing we use types to create a fake sensor object
 import types
 
+MinimumSecondsPerStep=int(2) #needs to be an int >= 1
+
+gpioOvenPin=18
+gpioButtonPin=10
+
+hysteresissize=1
 
 class LoopThread(Thread):
     def __init__(self, stop_event, program, sensor):
@@ -82,39 +88,45 @@ class LoopThread(Thread):
             curtemp=sensor.temperature
             hightemp = curtemp > hysteresistemp
             if ovenon & hightemp:
-                #GPIO.output(18, GPIO.LOW) #set control pin to low, note that currently it is hardcoded to pin 18 **TODO**
+                GPIO.output(gpioOvenPin, GPIO.LOW) #set control pin to low
                 if hysteresistemp>=settemp:
-                    hysteresistemp=settemp-1 #set the hysteresis temperature higher than settemp by 1 degree, currently hardcoded TODO
+                    hysteresistemp=settemp-hysteresissize #set the hysteresis temperature higher than settemp by 1 degree, currently hardcoded TODO
                     print('set hysteresis temp to: '+ str(hysteresistemp))
 
             elif ovenon:
-                #GPIO.output(18, GPIO.HIGH) #set control pin to high, note that currently it is hardcoded to pin 18 **TODO**
+                GPIO.output(gpioOvenPin, GPIO.HIGH) #set control pin to high
                 if hysteresistemp<settemp:
-                    hysteresistemp=settemp+1
+                    hysteresistemp=settemp+hysteresissize
                     print('set hysteresis temp to: '+ str(hysteresistemp))
             else:
-                #GPIO.output(18, GPIO.LOW) #set control pin to high, note that currently it is hardcoded to pin 18 **TODO**
+                GPIO.output(gpioOvenPin, GPIO.LOW) #set control pin to high
                 unused=1
 
-            #time.sleep(0.05) #TODO: turn on for production, remove sleeptime variable?
+            time.sleep(1) 
             sleeptime+=1
         
         #Added time for cycle total requiring a step less than 1 second 
-        #time.sleep((cycles*MinimumSecondsPerStep-int(cycles*MinimumSecondsPerStep))) #TODO: turn on for production, remove sleeptime variable?
+        time.sleep((cycles*MinimumSecondsPerStep-int(cycles*MinimumSecondsPerStep)))
         sleeptime+=(cycles*MinimumSecondsPerStep-int(cycles*MinimumSecondsPerStep))
-        #GPIO.output(18, GPIO.LOW) #set control pin to low, note that currently it is hardcoded to pin 18 **TODO**
+        GPIO.output(gpioOvenPin, GPIO.LOW) #set control pin to low
         if ovenon:
             print('oven on for for '+str(sleeptime)+' seconds')
         else:
             print('oven off for for '+str(sleeptime)+' seconds')
         return hysteresistemp
 
+
 STOP_EVENT = Event()
 thread = None
 
+def stopbutton(): # see: https://raspberrypihq.com/use-a-push-button-with-raspberry-pi-gpio/ connect gpioButtonPin to 3.3V, preferably through a resistor
+    if GPIO.input(gpioButtonPin) == GPIO.HIGH:
+        STOP_EVENT.set()
 
-#GPIO.setmode(GPIO.BCM)
-#GPIO.setup(18, GPIO.OUT)
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(gpioOvenPin, GPIO.OUT)
+GPIO.setup(gpioButtonPin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Set pin to be an input pin and set initial value to be pulled low (off)
+GPIO.add_event_detect(gpioButtonPin,GPIO.RISING,callback=stopbutton)
 
 """
 #stuff needed for reading the temperature
@@ -130,7 +142,7 @@ ProgramRunning=False
 CurrentProgramName=''
 CurrentStep=0
 
-MinimumSecondsPerStep=int(2) #needs to be an int >= 1
+
 
 app = Flask(__name__)
 
@@ -149,16 +161,19 @@ def home():
     programselect=''
     for program in programs:
         programselect+="<option value='"+json.dumps(programs[program])+"'>"+programs[program]['name']+"</option>\n"
-    
+    print()
     curtemp=sensor.temperature
     if STOP_EVENT.is_set():
         ovenisstopping='The program is currently stopping'
     else:
         ovenisstopping=''
     if ProgramRunning:
-        return render_template('Program_running.html',temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep,totalsteps=TotalSteps,ovenisstopping=ovenisstopping)
+        if thread!=None:
+            return render_template('Program_running.html',temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep,totalsteps=TotalSteps,ovenisstopping=ovenisstopping)
+        else:
+            return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='Program seems to have ended unexpectidly')
     else:
-        return render_template('No_program_running.html',programlist=programselect,temperature=curtemp)
+        return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='')
 
 @app.route("/stop",methods=["POST"])
 def stop():
@@ -276,6 +291,7 @@ def programs():
     with open('programs.json') as f:
         programs = json.load(f)
     return json.dumps(programs)
+
 
 if __name__ == '__main__':
     app.run()
