@@ -1,0 +1,3 @@
+graft oven_control/static
+graft oven_control/templates
+global-exclude *.pyc 
