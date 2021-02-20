@@ -169,7 +169,7 @@ def home():
     else:
         ovenisstopping=''
     if ProgramRunning:
-        if thread == None:
+        if not thread.is_alive():
             return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='program ended unexpectedly')
         else:
             return render_template('Program_running.html',temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep,totalsteps=TotalSteps,ovenisstopping=ovenisstopping)
@@ -186,7 +186,7 @@ def stop():
 def start():
     global thread
     errors = ""
-    if thread is None:
+    if (thread==None or not thread.is_alive()):
         try:
             programjson =request.form["programnumber"]
             program=json.loads(programjson)
@@ -209,7 +209,7 @@ def start():
 def startpost():
     global thread
     errors = ""
-    if thread is None:
+    if (thread==None or not thread.is_alive()):
         try:
             program=json.loads(request.data)
         except:
