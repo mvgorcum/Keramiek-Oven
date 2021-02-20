@@ -186,7 +186,7 @@ def stop():
 def start():
     global thread
     errors = ""
-    if STOP_EVENT.is_set():
+    if thread is None:
         try:
             programjson =request.form["programnumber"]
             program=json.loads(programjson)
@@ -201,7 +201,31 @@ def start():
         STOP_EVENT.clear()
         thread = LoopThread(STOP_EVENT, program, sensor)
         thread.start()
-    return redirect('/',code=302)
+        return redirect('/',code=302)
+    else:
+        return "A program is already running, cannot start a second one", 409
+
+@app.route("/startpost", methods=["POST"])
+def startpost():
+    global thread
+    errors = ""
+    if thread is None:
+        try:
+            program=json.loads(request.data)
+        except:
+            errors += "<p>{!r} is not valid json.</p>\n".format(request.form["programjson"])
+        if not (len(program['percentage'])==program['steps'] & len(program['temperature'])==program['steps'] & len(program['time'])==program['steps']):
+            errors +='<p>Invalid program sent, the amount of steps in inconsistent</p>'
+        if (max(map(int, program['percentage']))>100):
+            errors +='<p>Invalid program sent, Percentage higher than 100</p>'
+        if not errors=='':
+            return errors
+        STOP_EVENT.clear()
+        thread = LoopThread(STOP_EVENT, program, sensor)
+        thread.start()
+        return redirect('/',code=302)
+    else:
+        return "A program is already running, cannot start a second one", 409
 
 @app.route("/createprogram", methods=["POST", "GET"])
 def createprogram():
