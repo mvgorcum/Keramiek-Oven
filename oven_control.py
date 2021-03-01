@@ -2,24 +2,24 @@ import time
 import RPi.GPIO as GPIO
 import signal
 import sys
-"""
+
 #to read temperatures, we need this, according to https://github.com/adafruit/Adafruit_CircuitPython_MAX31855
 import adafruit_max31855 
 from busio import SPI
 from digitalio import DigitalInOut
 import board
-"""
+
 from threading import Thread, Event
 from flask import Flask, request, render_template, redirect
 import json
 
 #for testing we use types to create a fake sensor object
-import types
+#import types
 
 MinimumSecondsPerStep=int(2) #needs to be an int >= 1
 
-gpioOvenPin=18
-gpioButtonPin=10
+gpioOvenPin=23
+gpioButtonPin=22
 
 hysteresissize=1
 
@@ -128,15 +128,15 @@ GPIO.setup(gpioOvenPin, GPIO.OUT)
 GPIO.setup(gpioButtonPin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN) # Set pin to be an input pin and set initial value to be pulled low (off)
 GPIO.add_event_detect(gpioButtonPin,GPIO.RISING,callback=stopbutton)
 
-"""
+
 #stuff needed for reading the temperature
 spi = SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
 cs = DigitalInOut(board.D5)
 sensor = adafruit_max31855.MAX31855(spi, cs)
-"""
+
 #Create a fake sensor: TODO
-sensor = types.SimpleNamespace()
-sensor.temperature=110
+#sensor = types.SimpleNamespace()
+#sensor.temperature=110
 
 ProgramRunning=False
 CurrentProgramName=''
