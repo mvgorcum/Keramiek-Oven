@@ -74,7 +74,6 @@ class LoopThread(Thread):
                     hysteresistemp=self.ovencycle(settemp,hysteresistemp,1,True)
                     if self.stop_event.is_set():
                         break
-            #time.sleep(2) #TODO: remove me before production
             print('end of program step')
         ProgramRunning=False
         CurrentStep=0
@@ -82,11 +81,22 @@ class LoopThread(Thread):
         STOP_EVENT.set()
             
     def ovencycle(self,settemp,hysteresistemp,cycles,ovenon):
+        thermoerror=0
         sleeptime=0
         for _ in range(int(cycles*MinimumSecondsPerStep)): #loop over 2s * cycles, while checking each second if we should turn off
             if self.stop_event.is_set():
                 break
-            curtemp=sensor.temperature
+            try:
+                curtemp=sensor.temperature
+            except:
+                thermoerror+=1
+                print('could not read temperature')
+            finally:
+                thermoerror=0
+            if thermoerror>10:
+                STOP_EVENT.set()
+                print('thermocouple seems broken')
+                break
             hightemp = curtemp > hysteresistemp
             if ovenon & hightemp:
                 GPIO.output(gpioOvenPin, GPIO.LOW) #set control pin to low
@@ -101,7 +111,6 @@ class LoopThread(Thread):
                     print('set hysteresis temp to: '+ str(hysteresistemp))
             else:
                 GPIO.output(gpioOvenPin, GPIO.LOW) #set control pin to high
-                unused=1
 
             time.sleep(1) 
             sleeptime+=1
