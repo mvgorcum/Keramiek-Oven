@@ -205,6 +205,8 @@ def start():
             errors +='<p>Invalid program sent, the amount of steps in inconsistent</p>'
         if (max(map(int, program['percentage']))>100):
             errors +='<p>Invalid program sent, Percentage higher than 100</p>'
+        if program=='':
+            errors +='<p>Empty program sent.</p>'
         if not errors=='':
             return errors
         STOP_EVENT.clear()
@@ -222,7 +224,10 @@ def startpost():
         try:
             program=json.loads(request.data)
         except:
-            errors += "<p>{!r} is not valid json.</p>\n".format(request.form["programjson"])
+            if len(request.form)>0:
+                errors += "<p>{!r} is not valid json.</p>\n".format(request.form["programjson"])
+            else:
+                return '<p>Empty program sent.</p>'
         if not (len(program['percentage'])==program['steps'] & len(program['temperature'])==program['steps'] & len(program['time'])==program['steps']):
             errors +='<p>Invalid program sent, the amount of steps in inconsistent</p>'
         if (max(map(int, program['percentage']))>100):
