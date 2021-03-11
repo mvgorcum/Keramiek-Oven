@@ -93,15 +93,17 @@ class LoopThread(Thread):
                 break
             thermoerror=0
             tempfail=True
-            while (thermoerror<50 and tempfail):
+            while (thermoerror<10 and tempfail):
                 try:
                     curtemp=sensor.temperature
                 except:
                     thermoerror+=1
                     tempfail=True
                     print('could not read temperature')
+                    time.sleep(0.01)
                 else:
                     tempfail=False
+                    thermoerror=0
             if thermoerror>9:
                 STOP_EVENT.set()
                 print('thermocouple seems broken')
