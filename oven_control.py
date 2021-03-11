@@ -81,21 +81,28 @@ class LoopThread(Thread):
         STOP_EVENT.set()
             
     def ovencycle(self,settemp,hysteresistemp,cycles,ovenon):
+        global thermocouplebroken
+        thermocouplebroken=False
         thermoerror=0
         sleeptime=0
         for _ in range(int(cycles*MinimumSecondsPerStep)): #loop over 2s * cycles, while checking each second if we should turn off
             if self.stop_event.is_set():
                 break
-            try:
-                curtemp=sensor.temperature
-            except:
-                thermoerror+=1
-                print('could not read temperature')
-            finally:
-                thermoerror=0
-            if thermoerror>10:
+            thermoerror=0
+            tempfail=True
+            while (thermoerror<10 and tempfail):
+                try:
+                    curtemp=sensor.temperature
+                except:
+                    thermoerror+=1
+                    tempfail=True
+                    print('could not read temperature')
+                else:
+                    tempfail=False
+            if thermoerror>9:
                 STOP_EVENT.set()
                 print('thermocouple seems broken')
+                thermocouplebroken=True
                 break
             hightemp = curtemp > hysteresistemp
             if ovenon & hightemp:
@@ -166,6 +173,7 @@ def home():
     global CurrentProgramName
     global CurrentStep
     global TotalSteps
+    global thermocouplebroken
     with open('programs.json') as f:
         programs = json.load(f)
     programselect=''
@@ -182,7 +190,10 @@ def home():
         ovenisstopping=''
     if ProgramRunning:
         if not thread.is_alive():
-            return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='program ended unexpectedly')
+            if thermocouplebroken:
+                return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='Thermocouple seems broken')
+            else:
+                return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='program ended unexpectedly')
         else:
             return render_template('Program_running.html',temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep,totalsteps=TotalSteps,ovenisstopping=ovenisstopping)
     else:
