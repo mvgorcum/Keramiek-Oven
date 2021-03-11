@@ -90,7 +90,7 @@ class LoopThread(Thread):
                 break
             thermoerror=0
             tempfail=True
-            while (thermoerror<10 and tempfail):
+            while (thermoerror<50 and tempfail):
                 try:
                     curtemp=sensor.temperature
                 except:
