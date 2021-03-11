@@ -172,7 +172,10 @@ def home():
     for program in programs:
         programselect+="<option value='"+json.dumps(programs[program])+"'>"+programs[program]['name']+"</option>\n"
     print()
-    curtemp=sensor.temperature
+    try:
+        curtemp=sensor.temperature
+    except:
+        curtemp='error reading temperature'
     if STOP_EVENT.is_set():
         ovenisstopping='The program is currently stopping'
     else:
@@ -317,7 +320,10 @@ def status():
     global CurrentProgramName
     global CurrentStep
     global TotalSteps
-    curtemp=sensor.temperature
+    try:
+        curtemp=sensor.temperature
+    except:
+        curtemp='error reading temperature'
     statusobject={"temperature":curtemp}
     if ProgramRunning:
         statusobject.update({"isrunning":True,"currentprogram":CurrentProgramName,"currentstep":CurrentStep,"totalsteps":TotalSteps})
