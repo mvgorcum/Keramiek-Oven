@@ -24,10 +24,11 @@ gpioButtonPin=22
 hysteresissize=1
 
 class LoopThread(Thread):
-    def __init__(self, stop_event, program, sensor):
+    def __init__(self, stop_event, program, sensor, success_event):
         self.sensor=sensor
         self.stop_event = stop_event
         self.program = program
+        self.success_event=success_event
 
         Thread.__init__(self)
 
@@ -78,6 +79,8 @@ class LoopThread(Thread):
         ProgramRunning=False
         CurrentStep=0
         CurrentProgramName=''
+        if not self.stop_event.is_set():
+            self.success_event.set()
         STOP_EVENT.set()
             
     def ovencycle(self,settemp,hysteresistemp,cycles,ovenon):
@@ -134,6 +137,8 @@ class LoopThread(Thread):
 
 
 STOP_EVENT = Event()
+success_event= Event()
+
 thread = None
 
 def stopbutton(channel): # see: https://raspberrypihq.com/use-a-push-button-with-raspberry-pi-gpio/ connect gpioButtonPin to 3.3V, preferably through a resistor
@@ -198,7 +203,10 @@ def home():
             return render_template('Program_running.html',temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep,totalsteps=TotalSteps,ovenisstopping=ovenisstopping)
     else:
         STOP_EVENT.set()
-        return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='')
+        if success_event.is_set():
+            return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='Program ended successfully')
+        else:
+            return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='')
 
 @app.route("/stop",methods=["POST"])
 def stop():
@@ -224,7 +232,7 @@ def start():
         if not errors=='':
             return errors
         STOP_EVENT.clear()
-        thread = LoopThread(STOP_EVENT, program, sensor)
+        thread = LoopThread(STOP_EVENT, program, sensor, success_event)
         thread.start()
         return redirect('/',code=302)
     else:
@@ -249,7 +257,7 @@ def startpost():
         if not errors=='':
             return errors
         STOP_EVENT.clear()
-        thread = LoopThread(STOP_EVENT, program, sensor)
+        thread = LoopThread(STOP_EVENT, program, sensor, success_event)
         thread.start()
         return redirect('/',code=302)
     else:
