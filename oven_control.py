@@ -93,7 +93,7 @@ class LoopThread(Thread):
                 break
             thermoerror=0
             tempfail=True
-            while (thermoerror<10 and tempfail):
+            while (thermoerror<40 and tempfail):
                 try:
                     curtemp=sensor.temperature
                 except:
@@ -164,7 +164,7 @@ sensor = adafruit_max31855.MAX31855(spi, cs)
 ProgramRunning=False
 CurrentProgramName=''
 CurrentStep=0
-
+thermocouplebroken=False
 
 
 app = Flask(__name__)
@@ -207,6 +207,8 @@ def home():
         STOP_EVENT.set()
         if success_event.is_set():
             return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='Program ended successfully')
+        elif thermocouplebroken:
+            return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='Thermocouple seems broken')
         else:
             return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='')
 
