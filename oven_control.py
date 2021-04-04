@@ -83,6 +83,7 @@ class LoopThread(Thread):
                     if self.stop_event.is_set():
                         break
             print('end of program step')
+        
         ProgramRunning=False
         CurrentStep=0
         CurrentProgramName=''
