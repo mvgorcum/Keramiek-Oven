@@ -37,12 +37,22 @@ class LoopThread(Thread):
         global CurrentProgramName
         global CurrentStep
         global TotalSteps
+        global StartStepTime
+        global MaxTemp
+        global TotalTime
+
+        MaxTemp=0
+        
+        StartTime=time.time()
+
+        
 
         ProgramRunning=True
         CurrentProgramName=self.program['name']
         TotalSteps=self.program['steps']
         #Loop over all steps of the program that was POST-ed in json:
         for settemp, percent, steptime in zip(self.program['temperature'],self.program['percentage'],self.program['time']):
+            StartStepTime=time.time()
             CurrentStep+=1
             if self.stop_event.is_set():
                 break
@@ -81,10 +91,12 @@ class LoopThread(Thread):
         CurrentProgramName=''
         if not self.stop_event.is_set():
             self.success_event.set()
+        TotalTime=time.time()-StartTime
         STOP_EVENT.set()
             
     def ovencycle(self,settemp,hysteresistemp,cycles,ovenon):
         global thermocouplebroken
+        global MaxTemp
         thermocouplebroken=False
         thermoerror=0
         sleeptime=0
@@ -123,6 +135,9 @@ class LoopThread(Thread):
                     print('set hysteresis temp to: '+ str(hysteresistemp))
             else:
                 GPIO.output(gpioOvenPin, GPIO.LOW) #set control pin to high
+            if curtemp>MaxTemp:
+                MaxTemp=curtemp
+
 
             time.sleep(1) 
             sleeptime+=1
@@ -140,6 +155,11 @@ class LoopThread(Thread):
 
 STOP_EVENT = Event()
 success_event= Event()
+StartStepTime=0
+MaxTemp=0
+TotalTime=0
+
+
 
 thread = None
 
@@ -173,7 +193,7 @@ app = Flask(__name__)
 def gohome():
     return redirect('/', code=302)
 
-@app.route("/")
+@app.route("/") #start van webfrontend
 def home():
     global thread
     global ProgramRunning
@@ -181,12 +201,14 @@ def home():
     global CurrentStep
     global TotalSteps
     global thermocouplebroken
+    global StartStepTime
+    global TotalTime
+    global MaxTemp
     with open('programs.json') as f:
         programs = json.load(f)
     programselect=''
     for program in programs:
         programselect+="<option value='"+json.dumps(programs[program])+"'>"+programs[program]['name']+"</option>\n"
-    print()
     try:
         curtemp=sensor.temperature
     except:
@@ -202,11 +224,15 @@ def home():
             else:
                 return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='program ended unexpectedly')
         else:
-            return render_template('Program_running.html',temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep,totalsteps=TotalSteps,ovenisstopping=ovenisstopping)
+            steptime=(time.time()-StartStepTime)/60
+            programtime=str(round(steptime,2))+' minutes'
+            return render_template('Program_running.html',temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep,totalsteps=TotalSteps,ovenisstopping=ovenisstopping,steptime=programtime)
     else:
         STOP_EVENT.set()
         if success_event.is_set():
-            return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='Program ended successfully')
+            successtring='Program ended successfully'
+            summary='Took '+str(round(TotalTime/60,2))+' minutes, max Temperature: '+str(MaxTemp)+'°C'
+            return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror=successtring,resultsummary=summary)
         elif thermocouplebroken:
             return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='Thermocouple seems broken')
         else:
