@@ -42,14 +42,11 @@ class LoopThread(Thread):
         global TotalTime
 
         MaxTemp=0
-        
         StartTime=time.time()
-
-        
-
         ProgramRunning=True
         CurrentProgramName=self.program['name']
         TotalSteps=self.program['steps']
+        
         #Loop over all steps of the program that was POST-ed in json:
         for settemp, percent, steptime in zip(self.program['temperature'],self.program['percentage'],self.program['time']):
             StartStepTime=time.time()
