@@ -28,13 +28,14 @@ logger = logging.getLogger(__name__)
 
 class LoopThread(Thread):
     def __init__(self, stop_event, program, sensor, success_event):
+        super().__init__()
         self.sensor=sensor
         self.stop_event = stop_event
         self.program = program
         self.success_event=success_event
         logger.info(f'Initialized loopthread, trying to run program {program}')
-        Thread.__init__(self)
-
+        
+        
     def run(self):
         global ProgramRunning
         global CurrentProgramName
@@ -43,7 +44,7 @@ class LoopThread(Thread):
         global StartStepTime
         global MaxTemp
         global TotalTime
-        logger.info(f'Thread started, running {program}')
+        logger.info(f'Thread started, running {self.program}')
         MaxTemp=0
         StartTime=time.time()
         ProgramRunning=True
