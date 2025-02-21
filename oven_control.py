@@ -2,6 +2,7 @@ import time
 import RPi.GPIO as GPIO
 import signal
 import sys
+import logging
 
 #to read temperatures, we need this, according to https://github.com/adafruit/Adafruit_CircuitPython_MAX31855
 import adafruit_max31855 
@@ -23,13 +24,15 @@ gpioButtonPin=22
 
 hysteresissize=1
 
+logger = logging.getLogger(__name__)
+
 class LoopThread(Thread):
     def __init__(self, stop_event, program, sensor, success_event):
         self.sensor=sensor
         self.stop_event = stop_event
         self.program = program
         self.success_event=success_event
-
+        logger.info(f'Initialized loopthread, trying to run program {program}')
         Thread.__init__(self)
 
     def run(self):
@@ -40,7 +43,7 @@ class LoopThread(Thread):
         global StartStepTime
         global MaxTemp
         global TotalTime
-
+        logger.info(f'Thread started, running {program}')
         MaxTemp=0
         StartTime=time.time()
         ProgramRunning=True
@@ -52,7 +55,7 @@ class LoopThread(Thread):
             StartStepTime=time.time()
             CurrentStep+=1
             if self.stop_event.is_set():
-                print('stop event was set why trying to run step '+str(CurrentStep))
+                logger.info('stop event was set why trying to run step '+str(CurrentStep))
                 break
             oncycles=round(steptime*percent/100*(60/MinimumSecondsPerStep)) #total amount of X second cycles to keep the oven on (where self.program['time'] contains the time for each step in minutes)
             offcycles=round(steptime*(1-percent/100)*(60/MinimumSecondsPerStep))
@@ -83,7 +86,7 @@ class LoopThread(Thread):
                     hysteresistemp=self.ovencycle(settemp,hysteresistemp,1,True)
                     if self.stop_event.is_set():
                         break
-            print('end of program step')
+            logger.info(f'end of program step {CurrentStep}')
         
         ProgramRunning=False
         CurrentStep=0
@@ -94,7 +97,7 @@ class LoopThread(Thread):
         STOP_EVENT.set()
             
     def ovencycle(self,settemp,hysteresistemp,cycles,ovenon):
-        print('I will be on for '+str(int(cycles*MinimumSecondsPerStep))+' cycles')
+        logger.info('I will be on for '+str(int(cycles*MinimumSecondsPerStep))+' cycles')
         global thermocouplebroken
         global MaxTemp
         thermocouplebroken=False
@@ -102,7 +105,7 @@ class LoopThread(Thread):
         sleeptime=0
         for cycl in range(0,int(cycles*MinimumSecondsPerStep),1): #loop over 2s * cycles, while checking each second if we should turn off
             if self.stop_event.is_set():
-                print('stop event was set')
+                logger.info('stop event was set')
                 break
             thermoerror=0
             tempfail=True
@@ -112,14 +115,14 @@ class LoopThread(Thread):
                 except:
                     thermoerror+=1
                     tempfail=True
-                    print('could not read temperature')
+                    logger.info('could not read temperature')
                     time.sleep(0.01)
                 else:
                     tempfail=False
                     thermoerror=0
             if thermoerror>40:
                 STOP_EVENT.set()
-                print('thermocouple seems broken')
+                logger.info('thermocouple seems broken')
                 thermocouplebroken=True
                 break
             hightemp = curtemp > hysteresistemp
@@ -127,13 +130,13 @@ class LoopThread(Thread):
                 GPIO.output(gpioOvenPin, GPIO.LOW) #set control pin to low
                 if hysteresistemp>=settemp:
                     hysteresistemp=settemp-hysteresissize #set the hysteresis temperature higher than settemp by 1 degree, currently hardcoded TODO
-                    print('set hysteresis temp to: '+ str(hysteresistemp))
+                    logger.info('set hysteresis temp to: '+ str(hysteresistemp))
 
             elif ovenon:
                 GPIO.output(gpioOvenPin, GPIO.HIGH) #set control pin to high
                 if hysteresistemp<settemp:
                     hysteresistemp=settemp+hysteresissize
-                    print('set hysteresis temp to: '+ str(hysteresistemp))
+                    logger.info('set hysteresis temp to: '+ str(hysteresistemp))
             else:
                 GPIO.output(gpioOvenPin, GPIO.LOW) #set control pin to high
             if curtemp>MaxTemp:
@@ -142,17 +145,17 @@ class LoopThread(Thread):
 
             time.sleep(1) 
             sleeptime+=1
-            print('I just ran cycle number '+str(cycl))
+            logger.info('I just ran cycle number '+str(cycl))
         
         #Added time for cycle total requiring a step less than 1 second 
         time.sleep((cycles*MinimumSecondsPerStep-int(cycles*MinimumSecondsPerStep)))
         sleeptime+=(cycles*MinimumSecondsPerStep-int(cycles*MinimumSecondsPerStep))
         GPIO.output(gpioOvenPin, GPIO.LOW) #set control pin to low
         if ovenon:
-            print('oven on for for '+str(sleeptime)+' seconds')
-            print('I have ran '+str(cycl)+' cycles')
+            logger.info('oven on for for '+str(sleeptime)+' seconds')
+            logger.info('I have ran '+str(cycl)+' cycles')
         else:
-            print('oven off for for '+str(sleeptime)+' seconds')
+            logger.info('oven off for for '+str(sleeptime)+' seconds')
         return hysteresistemp
 
 
@@ -167,7 +170,7 @@ TotalTime=0
 thread = None
 
 def stopbutton(channel): # see: https://raspberrypihq.com/use-a-push-button-with-raspberry-pi-gpio/ connect gpioButtonPin to 3.3V, preferably through a resistor
-    print('button was pressed')
+    logger.info('button was pressed')
     #STOP_EVENT.set()
 
 GPIO.setmode(GPIO.BCM)
@@ -206,6 +209,7 @@ def home():
     global TotalSteps
     global thermocouplebroken
     global StartStepTime
+    global StartTime
     global TotalTime
     global MaxTemp
     with open('programs.json') as f:
@@ -229,8 +233,10 @@ def home():
                 return render_template('No_program_running.html',programlist=programselect,temperature=curtemp,threaderror='program ended unexpectedly')
         else:
             steptime=(time.time()-StartStepTime)/60
-            programtime=str(round(steptime,2))+' minutes'
-            return render_template('Program_running.html',temperature=curtemp,runningprogramname=CurrentProgramName,stepnumber=CurrentStep,totalsteps=TotalSteps,ovenisstopping=ovenisstopping,steptime=programtime)
+            steptimestring=str(round(steptime,2))+' minutes'
+            totprogtime=(time.time()-StartTime)/60
+            totprogtimestring=str(round(totprogtime,2))+' minutes'
+            return render_template('Program_running.html', temperature=curtemp,runningprogramname=CurrentProgramName, stepnumber=CurrentStep,totalsteps=TotalSteps, ovenisstopping=ovenisstopping, steptime=steptimestring, totalprogramtime=totprogtimestring)
     else:
         STOP_EVENT.set()
         if success_event.is_set():
@@ -398,5 +404,7 @@ def Exit_gracefully(signal, frame):
     sys.exit(0)
 
 if __name__ == '__main__':
+    logging.basicConfig(filename='keramiekoven.log', level=logging.INFO)
+    logger.info('Started python controller')
     signal.signal(signal.SIGINT, Exit_gracefully)
     app.run()
