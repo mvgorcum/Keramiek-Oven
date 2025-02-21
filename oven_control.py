@@ -44,6 +44,7 @@ class LoopThread(Thread):
         global StartStepTime
         global MaxTemp
         global TotalTime
+        global StartTime
         logger.info(f'Thread started, running {self.program}')
         MaxTemp=0
         StartTime=time.time()
