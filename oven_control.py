@@ -52,6 +52,7 @@ class LoopThread(Thread):
             StartStepTime=time.time()
             CurrentStep+=1
             if self.stop_event.is_set():
+                print('stop event was set why trying to run step '+str(CurrentStep))
                 break
             oncycles=round(steptime*percent/100*(60/MinimumSecondsPerStep)) #total amount of X second cycles to keep the oven on (where self.program['time'] contains the time for each step in minutes)
             offcycles=round(steptime*(1-percent/100)*(60/MinimumSecondsPerStep))
@@ -93,13 +94,15 @@ class LoopThread(Thread):
         STOP_EVENT.set()
             
     def ovencycle(self,settemp,hysteresistemp,cycles,ovenon):
+        print('I will be on for '+str(int(cycles*MinimumSecondsPerStep))+' cycles')
         global thermocouplebroken
         global MaxTemp
         thermocouplebroken=False
         thermoerror=0
         sleeptime=0
-        for _ in range(int(cycles*MinimumSecondsPerStep)): #loop over 2s * cycles, while checking each second if we should turn off
+        for cycl in range(0,int(cycles*MinimumSecondsPerStep),1): #loop over 2s * cycles, while checking each second if we should turn off
             if self.stop_event.is_set():
+                print('stop event was set')
                 break
             thermoerror=0
             tempfail=True
@@ -114,7 +117,7 @@ class LoopThread(Thread):
                 else:
                     tempfail=False
                     thermoerror=0
-            if thermoerror>9:
+            if thermoerror>40:
                 STOP_EVENT.set()
                 print('thermocouple seems broken')
                 thermocouplebroken=True
@@ -139,6 +142,7 @@ class LoopThread(Thread):
 
             time.sleep(1) 
             sleeptime+=1
+            print('I just ran cycle number '+str(cycl))
         
         #Added time for cycle total requiring a step less than 1 second 
         time.sleep((cycles*MinimumSecondsPerStep-int(cycles*MinimumSecondsPerStep)))
@@ -146,6 +150,7 @@ class LoopThread(Thread):
         GPIO.output(gpioOvenPin, GPIO.LOW) #set control pin to low
         if ovenon:
             print('oven on for for '+str(sleeptime)+' seconds')
+            print('I have ran '+str(cycl)+' cycles')
         else:
             print('oven off for for '+str(sleeptime)+' seconds')
         return hysteresistemp
@@ -162,7 +167,8 @@ TotalTime=0
 thread = None
 
 def stopbutton(channel): # see: https://raspberrypihq.com/use-a-push-button-with-raspberry-pi-gpio/ connect gpioButtonPin to 3.3V, preferably through a resistor
-    STOP_EVENT.set()
+    print('button was pressed')
+    #STOP_EVENT.set()
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(gpioOvenPin, GPIO.OUT)

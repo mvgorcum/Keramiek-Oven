@@ -1,0 +1,73 @@
+ * Serving Flask app "oven_control" (lazy loading)
+ * Environment: production
+   WARNING: Do not use the development server in a production environment.
+   Use a production WSGI server instead.
+ * Debug mode: off
+
+
+oven off for for 2.0 seconds
+
+oven on for for 2 seconds
+
+oven off for for 2.0 seconds
+
+oven on for for 2 seconds
+
+oven off for for 2.0 seconds
+
+oven on for for 2 seconds
+
+oven off for for 2.0 seconds
+
+oven on for for 2 seconds
+
+oven off for for 2.0 seconds
+
+oven on for for 2 seconds
+oven off for for 2.0 seconds
+
+oven on for for 2 seconds
+
+oven off for for 2.0 seconds
+
+oven on for for 2 seconds
+
+oven off for for 2.0 seconds
+
+oven on for for 2 seconds
+
+oven off for for 2.0 seconds
+
+oven on for for 2 seconds
+
+oven off for for 2.0 seconds
+
+oven on for for 2 seconds
+oven off for for 2.0 seconds
+
+oven on for for 2 seconds
+
+oven off for for 2.0 seconds
+
+oven on for for 2 seconds
+
+oven off for for 2.0 seconds
+
+oven on for for 2 seconds
+
+oven off for for 2.0 seconds
+
+oven on for for 2 seconds
+
+oven off for for 2.0 seconds
+
+oven on for for 2 seconds
+end of program step
+
+
+
+
+set hysteresis temp to: 26
+
+
+
